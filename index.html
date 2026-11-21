@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#090d16" />
+  <meta name="description" content="Navegador GPS vertical con orientación Heading-Up siempre en dirección de marcha, HUD translúcido y guía por voz sin bucles de recálculo." />
+  <title>RumboNav — Navegación Vertical</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main id="app" class="app">
+    <!-- Full-bleed Map -->
+    <div id="map" class="map-canvas" aria-label="Mapa de navegación"></div>
+
+    <!-- Top Translucent Navigation Pill -->
+    <header id="hud-top" class="hud-glass hud-top" role="status" aria-live="polite">
+      <div class="maneuver-badge" id="maneuver-icon" aria-hidden="true">↑</div>
+      <div class="hud-top-text">
+        <div class="hud-primary-row">
+          <span id="hud-distance" class="hud-distance">En marcha</span>
+          <span id="hud-status-badge" class="hud-status-badge hidden"></span>
+        </div>
+        <div id="hud-street" class="hud-street">Buscando ubicación...</div>
+      </div>
+      <button id="btn-search-toggle" class="icon-btn" type="button" title="Buscar destino" aria-label="Buscar destino">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Right-side Floating Micro Controls -->
+    <aside class="hud-controls" aria-label="Controles del mapa">
+      <button id="btn-recenter" class="hud-glass control-btn active" type="button" title="Orientación vertical (Heading-Up)" aria-label="Centrar y orientar hacia adelante">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 19 21 12 17 5 21 12 2"></polygon>
+        </svg>
+      </button>
+
+      <button id="btn-voice" class="hud-glass control-btn active" type="button" title="Silenciar / activar voz" aria-label="Alternar guía por voz">
+        <svg id="icon-voice-on" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+        <svg id="icon-voice-off" class="hidden" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line>
+          <line x1="17" y1="9" x2="23" y2="15"></line>
+        </svg>
+      </button>
+
+      <button id="btn-hud-opacity" class="hud-glass control-btn" type="button" title="Modo Mapa Limpio (más transparencia)" aria-label="Alternar transparencia de datos">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+
+      <button id="btn-demo" class="hud-glass control-btn" type="button" title="Simular recorrido" aria-label="Simular recorrido">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+      </button>
+    </aside>
+
+    <!-- Bottom Compact Translucent Telemetry Pill -->
+    <footer id="hud-bottom" class="hud-glass hud-bottom">
+      <div class="speed-block">
+        <span id="hud-speed" class="speed-value">0</span>
+        <span class="speed-unit">km/h</span>
+      </div>
+
+      <div id="route-telemetry" class="route-telemetry hidden">
+        <div class="divider"></div>
+        <div class="eta-block">
+          <span id="hud-eta" class="eta-value">—</span>
+          <span id="hud-rem-dist" class="eta-sub">—</span>
+        </div>
+        <button id="btn-cancel-route" class="cancel-route-btn" type="button" title="Finalizar ruta" aria-label="Finalizar ruta">✕</button>
+      </div>
+    </footer>
+
+    <!-- Collapsible Search Drawer (hidden by default so map is 100% clear) -->
+    <section id="search-drawer" class="hud-glass search-drawer hidden" aria-label="Buscar destino">
+      <form id="search-form" class="search-form">
+        <input
+          id="search-input"
+          class="search-input"
+          type="search"
+          placeholder="¿A dónde vas? (ej. Obelisco, Av. Corrientes...)"
+          autocomplete="off"
+        />
+        <button class="search-submit" type="submit">Ir</button>
+        <button id="btn-search-close" class="search-close" type="button" aria-label="Cerrar búsqueda">✕</button>
+      </form>
+      <ul id="search-results" class="search-results"></ul>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

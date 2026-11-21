@@ -1,0 +1,10 @@
+{
+  "name": "RumboNav — Navegación Vertical",
+  "short_name": "RumboNav",
+  "description": "Navegador GPS con orientación Heading-Up vertical, HUD translúcido y guía por voz sin bucles de recálculo.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090d16",
+  "theme_color": "#090d16"
+}
